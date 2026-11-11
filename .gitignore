@@ -4,6 +4,7 @@
 __pycache__
 .vscode
 *.py
+gen
 
 # Added by cargo
 

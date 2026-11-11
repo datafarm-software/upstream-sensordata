@@ -3,3 +3,8 @@
 *.json
 __pycache__
 .vscode
+*.py
+
+# Added by cargo
+
+/target

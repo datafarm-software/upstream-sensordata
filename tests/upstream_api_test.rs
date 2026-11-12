@@ -7,14 +7,14 @@ use std::sync::RwLock;
 struct Case {
     upstream: MockUpstream,
     input: SensorDataRequest,
-    _name: &'static str,
+    name: &'static str,
     want_token: Token,
 }
 
 #[tokio::test]
 async fn test_lazy_login() {
     let cases = vec![Case {
-        _name: "login on first request received",
+        name: "login on first request received",
         upstream: MockUpstream {
             token: RwLock::new(Some(Token::Invalid)),
         },
@@ -24,6 +24,7 @@ async fn test_lazy_login() {
         },
     }];
     for tc in cases {
+        println!("case: {}", tc.name);
         let _got = tc.upstream.sensor_data(tc.input).await;
         assert_eq!(*tc.upstream.token.read().unwrap(), Some(tc.want_token));
     }

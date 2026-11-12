@@ -1,13 +1,13 @@
 use crate::upstream_api::{ApiError, RestLoginBody, RestLoginResponse, Upstream};
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
-use tonic::{Request, Response, Result, Status};
+use tonic::Result;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Opts {
-    base_url: String,
-    username: String,
-    password: String,
+    pub base_url: String,
+    pub username: String,
+    pub password: String,
 }
 
 #[derive(Default)]
@@ -19,7 +19,7 @@ pub struct PSClient {
 }
 
 impl PSClient {
-    fn new(opts: Opts) -> Result<Self, reqwest::Error> {
+    pub fn new(opts: Opts) -> Result<Self, reqwest::Error> {
         let http = reqwest::Client::builder()
             .timeout(Duration::from_secs(10))
             .build()?;
@@ -58,7 +58,14 @@ async fn check_status(resp: reqwest::Response) -> Result<reqwest::Response, ApiE
 }
 
 impl Upstream for PSClient {
-    async fn login(&self, body: RestLoginBody<'_>) -> Result<RestLoginResponse, ApiError> {
+    async fn login(&self, _body: RestLoginBody<'_>) -> Result<RestLoginResponse, ApiError> {
+        todo!()
+    }
+
+    async fn sensor_data(
+        &self,
+        _body: crate::sensor_data::SensorDataRequest,
+    ) -> Result<crate::sensor_data::SensorDataResponse, ApiError> {
         todo!()
     }
 }

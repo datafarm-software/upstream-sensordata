@@ -1,20 +1,7 @@
-use probe_schedule_client::upstream_api::probe_schedule::PSClient;
+use probe_schedule_client::sensor_data::{SensorDataRequest, SensorDataResponse};
 use probe_schedule_client::upstream_api::{ApiError, RestLoginBody, RestLoginResponse, Upstream};
 
-pub enum KnownUpstream {
-    Mock(MockUpstream),
-    Ps(PSClient),
-}
-
-impl Upstream for KnownUpstream {
-    async fn login(&self, body: RestLoginBody<'_>) -> tonic::Result<RestLoginResponse, ApiError> {
-        match self {
-            KnownUpstream::Mock(u) => u.login(body).await,
-            KnownUpstream::Ps(u) => u.login(body).await,
-        }
-    }
-}
-
+#[derive(Debug, PartialEq)]
 pub enum Token {
     Valid,
     Invalid,
@@ -30,5 +17,12 @@ impl Upstream for MockUpstream {
         Ok(RestLoginResponse {
             token: "valid-token".to_string(),
         })
+    }
+
+    async fn sensor_data(
+        &self,
+        body: SensorDataRequest,
+    ) -> tonic::Result<SensorDataResponse, ApiError> {
+        todo!()
     }
 }

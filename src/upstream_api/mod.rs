@@ -1,11 +1,21 @@
+use crate::sensor_data::{SensorDataRequest, SensorDataResponse};
 use serde::{Deserialize, Serialize};
-use tonic::{Request, Response, Result, Status};
+use std::future::Future;
+use tonic::{Result, Status};
 include!("upstream_api_error.rs");
 
 pub mod probe_schedule;
 
 pub trait Upstream: Send + Sync {
-    async fn login(&self, body: RestLoginBody) -> Result<RestLoginResponse, ApiError>;
+    fn login(
+        &self,
+        body: RestLoginBody,
+    ) -> impl Future<Output = Result<RestLoginResponse, ApiError>> + Send;
+
+    fn sensor_data(
+        &self,
+        body: SensorDataRequest,
+    ) -> impl Future<Output = Result<SensorDataResponse, ApiError>> + Send;
 }
 
 #[derive(Serialize)]

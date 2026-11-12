@@ -2,8 +2,8 @@ version: v2
 clean: true
 plugins:
   - remote: buf.build/community/neoeinstein-prost
-    out: gen/rust
+    out: generated/rust
   - remote: buf.build/community/neoeinstein-tonic
-    out: gen/rust
+    out: generated/rust
 inputs:
   - directory: proto

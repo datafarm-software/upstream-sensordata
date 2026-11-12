@@ -1,25 +1,31 @@
 mod common;
-use common::{KnownUpstream, MockUpstream, Token};
+use common::{MockUpstream, Token};
+use probe_schedule_client::sensor_data::{SensorDataRequest, SensorDataResponse};
 use probe_schedule_client::upstream_api::Upstream;
 use tonic::Code;
 
 struct Case {
-    upstream: KnownUpstream,
+    upstream: MockUpstream,
+    input: SensorDataRequest,
     name: &'static str,
-    want: Token,
+    want_token: Token,
 }
 
 #[tokio::test]
-async fn test_login() {
+async fn test_lazy_login() {
     let cases = vec![Case {
-        name: "login on startup",
-        upstream: KnownUpstream::Mock(MockUpstream {
+        name: "login on first request received",
+        upstream: MockUpstream {
             token: Token::Invalid,
             return_code: Code::Unauthenticated,
-        }),
-        want: Token::Valid,
+        },
+        want_token: Token::Valid,
+        input: SensorDataRequest {
+            device_id: "device1".to_string(),
+        },
     }];
     for tc in cases {
-        let got = tc.upstream.login();
+        let got = tc.upstream.sensor_data(tc.input);
+        assert_eq!(tc.upstream.token, tc.want_token);
     }
 }

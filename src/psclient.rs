@@ -57,6 +57,15 @@ impl PSClient {
     }
 }
 
+async fn check_status(resp: reqwest::Response) -> Result<reqwest::Response, ApiError> {
+    let status = resp.status();
+    if status.is_success() {
+        return Ok(resp);
+    }
+    let body = resp.text().await.unwrap_or_default();
+    Err(ApiError::Upstream { status, body })
+}
+
 #[derive(Serialize)]
 struct LoginBody<'a> {
     username: &'a str,

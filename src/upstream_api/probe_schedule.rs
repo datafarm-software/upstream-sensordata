@@ -1,6 +1,5 @@
-use crate::upstream_api::{ApiError, RestLoginBody, RestLoginResponse, Upstream};
+use crate::upstream_api::{ApiError, RestLoginBody, RestLoginResponse, Token, Transport};
 use serde::{Deserialize, Serialize};
-use std::sync::RwLock;
 use std::time::Duration;
 use tonic::Result;
 
@@ -13,7 +12,6 @@ pub struct Opts {
 
 #[derive(Default)]
 pub struct PSClient {
-    token: RwLock<Option<String>>,
     base_url: String,
     username: String,
     password: String,
@@ -26,7 +24,6 @@ impl PSClient {
             .timeout(Duration::from_secs(10))
             .build()?;
         Ok(Self {
-            token: RwLock::default(),
             base_url: opts.base_url,
             username: opts.username,
             password: opts.password,
@@ -44,8 +41,8 @@ async fn check_status(resp: reqwest::Response) -> Result<reqwest::Response, ApiE
     Err(ApiError::Upstream { status, body })
 }
 
-impl Upstream for PSClient {
-    async fn login(&self) -> Result<(), ApiError> {
+impl Transport for PSClient {
+    async fn login(&self) -> Result<Token, ApiError> {
         let resp = self
             .http
             .post(format!("{}/token", self.base_url))
@@ -58,12 +55,12 @@ impl Upstream for PSClient {
 
         let resp = check_status(resp).await?;
         let reply: RestLoginResponse = resp.json().await?;
-        *self.token.write().unwrap() = Some(reply.token);
-        Ok(())
+        Ok(&reply.token.as_str())
     }
 
     async fn sensor_data(
         &self,
+        _token: &Token,
         _body: crate::sensor_data::SensorDataRequest,
     ) -> Result<crate::sensor_data::SensorDataResponse, ApiError> {
         todo!()

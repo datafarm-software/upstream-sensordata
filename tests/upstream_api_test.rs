@@ -1,11 +1,10 @@
 mod common;
-use common::{MockUpstream, Token};
+use common::MockUpstream;
 use probe_schedule_client::sensor_data::SensorDataRequest;
-use probe_schedule_client::upstream_api::Upstream;
-use std::sync::RwLock;
+use probe_schedule_client::upstream_api::{Token, Transport};
 
 struct Case {
-    upstream: MockUpstream,
+    transport: MockUpstream,
     input: SensorDataRequest,
     name: &'static str,
     want_token: Token,
@@ -15,10 +14,8 @@ struct Case {
 async fn test_lazy_login() {
     let cases = vec![Case {
         name: "login on first request received",
-        upstream: MockUpstream {
-            token: RwLock::new(Some(Token::Invalid)),
-        },
-        want_token: Token::Valid,
+        transport: MockUpstream {},
+        want_token: common::VALID_TOKEN,
         input: SensorDataRequest {
             device_id: "device1".to_string(),
         },

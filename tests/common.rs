@@ -1,28 +1,22 @@
 use probe_schedule_client::sensor_data::{SensorDataRequest, SensorDataResponse};
-use probe_schedule_client::upstream_api::{ApiError, Upstream};
+use probe_schedule_client::upstream_api::{ApiError, Token, Transport};
 use std::sync::RwLock;
 
-#[derive(Debug, PartialEq)]
-pub enum Token {
-    Valid,
-    Invalid,
-}
+pub struct MockUpstream {}
 
-pub struct MockUpstream {
-    pub token: RwLock<Option<Token>>,
-}
+const VALID_TOKEN: Token = "Valid Token";
+const INVALID_TOKEN: Token = "Invalid Token";
 
-impl Upstream for MockUpstream {
-    async fn login(&self) -> Result<(), ApiError> {
-        *self.token.write().unwrap() = Some(Token::Valid);
-        Ok(())
+impl Transport for MockUpstream {
+    async fn login(&self) -> Result<Token, ApiError> {
+        Ok(("Valid Token"))
     }
 
     async fn sensor_data(
         &self,
+        token: &Token,
         _body: SensorDataRequest,
     ) -> tonic::Result<SensorDataResponse, ApiError> {
-        self.login().await?;
         Err(ApiError::Upstream {
             status: reqwest::StatusCode::NOT_IMPLEMENTED,
             body: "not implemented".to_string(),

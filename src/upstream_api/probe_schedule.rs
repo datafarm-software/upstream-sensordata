@@ -1,12 +1,7 @@
-use crate::upstream_api::Upstream;
+use crate::upstream_api::{ApiError, RestLoginBody, RestLoginResponse, Upstream};
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 use tonic::{Request, Response, Result, Status};
-
-pub mod psclient_grpc {
-    include!("../gen/rust/psclient/v1/psclient.v1.rs");
-    include!("../gen/rust/psclient/v1/psclient.v1.tonic.rs");
-}
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Opts {
@@ -16,7 +11,7 @@ pub struct Opts {
 }
 
 #[derive(Default)]
-struct PSClient {
+pub struct PSClient {
     base_url: String,
     username: String,
     password: String,
@@ -36,20 +31,20 @@ impl PSClient {
         })
     }
 
-    async fn do_login(&self, req: &LoginRequest) -> Result<LoginResponse, ApiError> {
+    async fn do_login(&self, req: &RestLoginBody<'_>) -> Result<RestLoginResponse, ApiError> {
         let resp = self
             .http
             .post(format!("{}/token", self.base_url))
             .json(&RestLoginBody {
-                username: &req.username,
-                password: &req.password,
+                username: req.username,
+                password: req.password,
             })
             .send()
             .await?;
 
         let resp = check_status(resp).await?;
         let reply: RestLoginResponse = resp.json().await?;
-        Ok(LoginResponse { token: reply.token })
+        Ok(RestLoginResponse { token: reply.token })
     }
 }
 
@@ -62,4 +57,8 @@ async fn check_status(resp: reqwest::Response) -> Result<reqwest::Response, ApiE
     Err(ApiError::Upstream { status, body })
 }
 
-impl Upstream for PSClient {}
+impl Upstream for PSClient {
+    async fn login(&self, body: RestLoginBody<'_>) -> Result<RestLoginResponse, ApiError> {
+        todo!()
+    }
+}

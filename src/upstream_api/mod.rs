@@ -2,6 +2,8 @@ use serde::{Deserialize, Serialize};
 use tonic::{Request, Response, Result, Status};
 include!("upstream_api_error.rs");
 
+pub mod probe_schedule;
+
 pub trait Upstream: Send + Sync {
     async fn login(&self, body: RestLoginBody) -> Result<RestLoginResponse, ApiError>;
 }

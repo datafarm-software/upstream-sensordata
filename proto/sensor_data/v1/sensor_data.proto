@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+package sensor_data.v1;
+
+service SensorDataService {
+  rpc SensorData(SensorDataRequest) returns (SensorDataResponse) {}
+}
+
+message SensorDataRequest {
+  string device_id = 1 [json_name = "deviceId"];
+}
+
+message SensorData {
+  string device_id = 1 [json_name = "deviceId"];
+  map<string, double> sensor_data = 2 [json_name = "sensorData"];
+  string timestamp = 3;
+}
+
+message SensorDataResponse {
+  repeated SensorData response = 1;
+}

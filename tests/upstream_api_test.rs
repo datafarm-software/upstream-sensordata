@@ -4,8 +4,8 @@ use probe_schedule_client::upstream_api::Upstream;
 use tonic::Code;
 
 struct Case {
-    name: &'static str,
     upstream: KnownUpstream,
+    name: &'static str,
     want: Token,
 }
 

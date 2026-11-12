@@ -1,9 +1,7 @@
-use crate::error::ApiError;
+include!("psclient_error.rs");
 use crate::psclient::psclient_grpc::ps_client_service_server::PsClientService;
 use crate::psclient::psclient_grpc::{LoginRequest, LoginResponse};
 use serde::{Deserialize, Serialize};
-use serde_json::{self};
-use serde_yaml::{self};
 use std::time::Duration;
 use tonic::{Request, Response, Result, Status};
 

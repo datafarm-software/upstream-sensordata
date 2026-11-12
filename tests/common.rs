@@ -10,7 +10,6 @@ pub enum Token {
 
 pub struct MockUpstream {
     pub token: RwLock<Option<Token>>,
-    pub return_code: tonic::Code,
 }
 
 impl Upstream for MockUpstream {

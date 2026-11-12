@@ -42,7 +42,7 @@ impl PSClient {
         let resp = self
             .http
             .post(format!("{}/token", self.base_url))
-            .json(&LoginBody {
+            .json(&RestLoginBody {
                 username: &req.username,
                 password: &req.password,
             })
@@ -62,17 +62,6 @@ async fn check_status(resp: reqwest::Response) -> Result<reqwest::Response, ApiE
     }
     let body = resp.text().await.unwrap_or_default();
     Err(ApiError::Upstream { status, body })
-}
-
-#[derive(Serialize)]
-struct LoginBody<'a> {
-    username: &'a str,
-    password: &'a str,
-}
-
-#[derive(Deserialize)]
-struct RestLoginResponse {
-    token: String,
 }
 
 #[tonic::async_trait]

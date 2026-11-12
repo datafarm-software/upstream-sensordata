@@ -1,4 +1,19 @@
+use probe_schedule_client::upstream_api::probe_schedule::PSClient;
 use probe_schedule_client::upstream_api::{ApiError, RestLoginBody, RestLoginResponse, Upstream};
+
+pub enum KnownUpstream {
+    Mock(MockUpstream),
+    Ps(PSClient),
+}
+
+impl Upstream for KnownUpstream {
+    async fn login(&self, body: RestLoginBody<'_>) -> tonic::Result<RestLoginResponse, ApiError> {
+        match self {
+            KnownUpstream::Mock(u) => u.login(body).await,
+            KnownUpstream::Ps(u) => u.login(body).await,
+        }
+    }
+}
 
 pub enum Token {
     Valid,

@@ -1,8 +1,10 @@
+use crate::error::ApiError;
 use crate::psclient::psclient_grpc::ps_client_service_server::PsClientService;
 use crate::psclient::psclient_grpc::{LoginRequest, LoginResponse};
 use serde::{Deserialize, Serialize};
 use serde_json::{self};
 use serde_yaml::{self};
+use std::time::Duration;
 use tonic::{Request, Response, Result, Status};
 
 pub mod psclient_grpc {
@@ -26,14 +28,32 @@ struct PSClient {
 }
 
 impl PSClient {
-    fn new(opts: Opts) -> Self {
-        let http = reqwest::Client::new();
-        Self {
+    fn new(opts: Opts) -> Result<Self, reqwest::Error> {
+        let http = reqwest::Client::builder()
+            .timeout(Duration::from_secs(10))
+            .build()?;
+        Ok(Self {
             base_url: opts.base_url,
             username: opts.username,
             password: opts.password,
             http,
-        }
+        })
+    }
+
+    async fn do_login(&self, req: &LoginRequest) -> Result<LoginResponse, ApiError> {
+        let resp = self
+            .http
+            .post(format!("{}/token", self.base_url))
+            .json(&LoginBody {
+                username: &req.username,
+                password: &req.password,
+            })
+            .send()
+            .await?;
+
+        let resp = check_status(resp).await?;
+        let reply: RestLoginResponse = resp.json().await?;
+        Ok(LoginResponse { token: reply.token })
     }
 }
 
@@ -54,12 +74,7 @@ impl PsClientService for PSClient {
         &self,
         request: Request<LoginRequest>,
     ) -> Result<Response<LoginResponse>, Status> {
-        let url = format!("{}/token", self.base_url);
-        let body = LoginBody {
-            username: &self.username,
-            password: &self.password,
-        };
-        let reply: RestLoginResponse = self.http.post(url).json(&body).send().await?.json().await?;
-        return Ok();
+        let resp = self.do_login(&request.into_inner()).await?;
+        Ok(Response::new(resp))
     }
 }

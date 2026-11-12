@@ -1,5 +1,6 @@
 use probe_schedule_client::sensor_data::{SensorDataRequest, SensorDataResponse};
-use probe_schedule_client::upstream_api::{ApiError, RestLoginBody, RestLoginResponse, Upstream};
+use probe_schedule_client::upstream_api::{ApiError, Upstream};
+use std::sync::RwLock;
 
 #[derive(Debug, PartialEq)]
 pub enum Token {
@@ -8,19 +9,24 @@ pub enum Token {
 }
 
 pub struct MockUpstream {
-    pub token: Token,
+    pub token: RwLock<Option<Token>>,
     pub return_code: tonic::Code,
 }
 
 impl Upstream for MockUpstream {
-    async fn login(&self) -> Option<ApiError> {
-        self.token = Token::Valid;
+    async fn login(&self) -> Result<(), ApiError> {
+        *self.token.write().unwrap() = Some(Token::Valid);
+        Ok(())
     }
 
     async fn sensor_data(
         &self,
         _body: SensorDataRequest,
     ) -> tonic::Result<SensorDataResponse, ApiError> {
-        self.login();
+        self.login().await?;
+        Err(ApiError::Upstream {
+            status: reqwest::StatusCode::NOT_IMPLEMENTED,
+            body: "not implemented".to_string(),
+        })
     }
 }

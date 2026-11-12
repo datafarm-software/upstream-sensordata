@@ -1,9 +1,19 @@
-use probe_schedule_client::upstream_api::Upstream;
+use probe_schedule_client::upstream_api::{ApiError, RestLoginBody, RestLoginResponse, Upstream};
 
-struct MockUpstream {
-    return_code: reqwest::StatusCode,
+pub enum Token {
+    Valid,
+    Invalid,
 }
 
-impl Upstream for MockUpstream {}
+pub struct MockUpstream {
+    pub token: Token,
+    pub return_code: tonic::Code,
+}
 
-pub fn setup() {}
+impl Upstream for MockUpstream {
+    async fn login(&self, _: RestLoginBody<'_>) -> tonic::Result<RestLoginResponse, ApiError> {
+        Ok(RestLoginResponse {
+            token: "valid-token".to_string(),
+        })
+    }
+}

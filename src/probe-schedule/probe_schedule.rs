@@ -1,6 +1,4 @@
-include!("psclient_error.rs");
-use crate::psclient::psclient_grpc::ps_client_service_server::PsClientService;
-use crate::psclient::psclient_grpc::{LoginRequest, LoginResponse};
+use crate::upstream_api::Upstream;
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 use tonic::{Request, Response, Result, Status};
@@ -64,13 +62,4 @@ async fn check_status(resp: reqwest::Response) -> Result<reqwest::Response, ApiE
     Err(ApiError::Upstream { status, body })
 }
 
-#[tonic::async_trait]
-impl PsClientService for PSClient {
-    async fn login(
-        &self,
-        request: Request<LoginRequest>,
-    ) -> Result<Response<LoginResponse>, Status> {
-        let resp = self.do_login(&request.into_inner()).await?;
-        Ok(Response::new(resp))
-    }
-}
+impl Upstream for PSClient {}

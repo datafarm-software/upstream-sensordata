@@ -14,5 +14,5 @@ pub struct RestLoginBody<'a> {
 
 #[derive(Deserialize)]
 pub struct RestLoginResponse {
-    token: String,
+    pub token: String,
 }

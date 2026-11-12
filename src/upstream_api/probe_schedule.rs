@@ -1,5 +1,6 @@
 use crate::upstream_api::{ApiError, RestLoginBody, RestLoginResponse, Upstream};
 use serde::{Deserialize, Serialize};
+use std::sync::RwLock;
 use std::time::Duration;
 use tonic::Result;
 
@@ -12,6 +13,7 @@ pub struct Opts {
 
 #[derive(Default)]
 pub struct PSClient {
+    token: RwLock<Option<String>>,
     base_url: String,
     username: String,
     password: String,
@@ -24,27 +26,12 @@ impl PSClient {
             .timeout(Duration::from_secs(10))
             .build()?;
         Ok(Self {
+            token: RwLock::default(),
             base_url: opts.base_url,
             username: opts.username,
             password: opts.password,
             http,
         })
-    }
-
-    async fn do_login(&self, req: &RestLoginBody<'_>) -> Result<RestLoginResponse, ApiError> {
-        let resp = self
-            .http
-            .post(format!("{}/token", self.base_url))
-            .json(&RestLoginBody {
-                username: req.username,
-                password: req.password,
-            })
-            .send()
-            .await?;
-
-        let resp = check_status(resp).await?;
-        let reply: RestLoginResponse = resp.json().await?;
-        Ok(RestLoginResponse { token: reply.token })
     }
 }
 
@@ -58,8 +45,21 @@ async fn check_status(resp: reqwest::Response) -> Result<reqwest::Response, ApiE
 }
 
 impl Upstream for PSClient {
-    async fn login(&self, _body: RestLoginBody<'_>) -> Result<RestLoginResponse, ApiError> {
-        todo!()
+    async fn login(&self) -> Result<(), ApiError> {
+        let resp = self
+            .http
+            .post(format!("{}/token", self.base_url))
+            .json(&RestLoginBody {
+                username: &self.username,
+                password: &self.password,
+            })
+            .send()
+            .await?;
+
+        let resp = check_status(resp).await?;
+        let reply: RestLoginResponse = resp.json().await?;
+        *self.token.write().unwrap() = Some(reply.token);
+        Ok(())
     }
 
     async fn sensor_data(

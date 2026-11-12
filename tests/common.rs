@@ -13,16 +13,14 @@ pub struct MockUpstream {
 }
 
 impl Upstream for MockUpstream {
-    async fn login(&self, _: RestLoginBody<'_>) -> tonic::Result<RestLoginResponse, ApiError> {
-        Ok(RestLoginResponse {
-            token: "valid-token".to_string(),
-        })
+    async fn login(&self) -> Option<ApiError> {
+        self.token = Token::Valid;
     }
 
     async fn sensor_data(
         &self,
-        body: SensorDataRequest,
+        _body: SensorDataRequest,
     ) -> tonic::Result<SensorDataResponse, ApiError> {
-        todo!()
+        self.login();
     }
 }

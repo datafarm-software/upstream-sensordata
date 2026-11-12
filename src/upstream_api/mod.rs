@@ -7,10 +7,7 @@ include!("upstream_api_error.rs");
 pub mod probe_schedule;
 
 pub trait Upstream: Send + Sync {
-    fn login(
-        &self,
-        body: RestLoginBody,
-    ) -> impl Future<Output = Result<RestLoginResponse, ApiError>> + Send;
+    fn login(&self) -> impl Future<Output = Result<(), ApiError>> + Send;
 
     fn sensor_data(
         &self,

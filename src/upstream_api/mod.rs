@@ -1,5 +1,6 @@
 use crate::sensor_data::sensor_data_service_server::SensorDataService;
 use crate::sensor_data::{SensorDataRequest, SensorDataResponse};
+use reqwest::StatusCode;
 use serde::{Deserialize, Serialize};
 use std::future::Future;
 use std::sync::RwLock;
@@ -51,15 +52,36 @@ impl<T: Transport + 'static> Authed<T> {
             refresh_gate: tokio::sync::Mutex::default(),
         }
     }
+
+    async fn ensure_token(&self) -> Token {
+        match self.token.read().unwrap().clone() {
+            Some(t) => t,
+            None => Token::new(String::from("")),
+        }
+    }
 }
 
 #[tonic::async_trait]
 impl<T: Transport + 'static> SensorDataService for Authed<T> {
     async fn sensor_data(
         &self,
-        _req: Request<SensorDataRequest>,
+        req: Request<SensorDataRequest>,
     ) -> Result<Response<SensorDataResponse>, Status> {
-        todo!()
+        let token = self.ensure_token().await;
+        match self
+            .transport
+            .sensor_data(&token, req.into_inner().clone())
+            .await
+        {
+            Err(ApiError::Upstream { status, body })
+                if status == StatusCode::BAD_REQUEST
+                    || status == StatusCode::UNPROCESSABLE_ENTITY =>
+            {
+                let token = self.refresh(Some(&token)).await?;
+                self.transport.sensor_data(&token, body).await
+            }
+            other => other,
+        }
     }
 }
 

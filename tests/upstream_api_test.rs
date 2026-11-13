@@ -1,7 +1,8 @@
 mod common;
 use common::MockUpstream;
 use probe_schedule_client::sensor_data::SensorDataRequest;
-use probe_schedule_client::upstream_api::{Token, Transport};
+use probe_schedule_client::upstream_api;
+use upstream_api::{Token, Transport};
 
 struct Case {
     transport: MockUpstream,
@@ -22,7 +23,8 @@ async fn test_lazy_login() {
     }];
     for tc in cases {
         println!("case: {}", tc.name);
-        let _got = tc.upstream.sensor_data(tc.input).await;
+        let authed = upstream_api::Authed::new(tc.transport);
+        let _got = authed.sensor_data(tc.input).await;
         assert_eq!(*tc.upstream.token.read().unwrap(), Some(tc.want_token));
     }
 }

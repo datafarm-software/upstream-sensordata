@@ -55,7 +55,7 @@ impl Transport for PSClient {
 
         let resp = check_status(resp).await?;
         let reply: RestLoginResponse = resp.json().await?;
-        Ok(&reply.token.as_str())
+        Ok(Token::new(reply.token))
     }
 
     async fn sensor_data(

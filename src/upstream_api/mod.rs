@@ -1,13 +1,31 @@
+use crate::sensor_data::sensor_data_service_server::SensorDataService;
 use crate::sensor_data::{SensorDataRequest, SensorDataResponse};
 use serde::{Deserialize, Serialize};
 use std::future::Future;
 use std::sync::RwLock;
-use tonic::{Result, Status};
+use tonic::{Request, Response, Result, Status};
 include!("upstream_api_error.rs");
 
 pub mod probe_schedule;
 
-pub type Token = &'static str;
+#[derive(Clone, PartialEq, Eq)]
+pub struct Token(std::sync::Arc<str>);
+
+impl Token {
+    pub fn new(s: String) -> Self {
+        Self(s.into())
+    }
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+// keep secrets out of logs
+impl std::fmt::Debug for Token {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("Token(***)")
+    }
+}
 
 pub trait Transport: Send + Sync {
     fn login(&self) -> impl Future<Output = Result<Token, ApiError>> + Send;
@@ -19,13 +37,31 @@ pub trait Transport: Send + Sync {
     ) -> impl Future<Output = Result<SensorDataResponse, ApiError>> + Send;
 }
 
-pub struct Authed<T: Transport> {
-    transport: T,
+pub struct Authed<T: Transport + 'static> {
+    transport: &'static T,
     token: RwLock<Option<Token>>,
     refresh_gate: tokio::sync::Mutex<()>,
 }
 
-impl<T: Transport> Authed<T> {}
+impl<T: Transport + 'static> Authed<T> {
+    pub fn new(t: &'static T) -> Self {
+        Authed {
+            transport: t,
+            token: RwLock::default(),
+            refresh_gate: tokio::sync::Mutex::default(),
+        }
+    }
+}
+
+#[tonic::async_trait]
+impl<T: Transport + 'static> SensorDataService for Authed<T> {
+    async fn sensor_data(
+        &self,
+        _req: Request<SensorDataRequest>,
+    ) -> Result<Response<SensorDataResponse>, Status> {
+        todo!()
+    }
+}
 
 #[derive(Serialize)]
 pub struct RestLoginBody<'a> {

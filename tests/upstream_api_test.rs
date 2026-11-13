@@ -1,11 +1,12 @@
+use probe_schedule_client::sensor_data::sensor_data_service_server::SensorDataService;
 mod common;
 use common::MockUpstream;
 use probe_schedule_client::sensor_data::SensorDataRequest;
 use probe_schedule_client::upstream_api;
-use upstream_api::{Token, Transport};
+use upstream_api::Token;
 
 struct Case {
-    transport: MockUpstream,
+    transport: &'static MockUpstream,
     input: SensorDataRequest,
     name: &'static str,
     want_token: Token,
@@ -15,8 +16,8 @@ struct Case {
 async fn test_lazy_login() {
     let cases = vec![Case {
         name: "login on first request received",
-        transport: MockUpstream {},
-        want_token: common::VALID_TOKEN,
+        transport: &MockUpstream {},
+        want_token: Token::new(String::from(common::VALID_TOKEN)),
         input: SensorDataRequest {
             device_id: "device1".to_string(),
         },
@@ -24,7 +25,7 @@ async fn test_lazy_login() {
     for tc in cases {
         println!("case: {}", tc.name);
         let authed = upstream_api::Authed::new(tc.transport);
-        let _got = authed.sensor_data(tc.input).await;
-        assert_eq!(*tc.upstream.token.read().unwrap(), Some(tc.want_token));
+        let _got = authed.sensor_data(tonic::Request::new(tc.input)).await;
+        assert_eq!(*authed.token.read().unwrap(), Some(tc.want_token));
     }
 }

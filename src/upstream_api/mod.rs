@@ -39,7 +39,7 @@ pub trait Transport: Send + Sync {
 
 pub struct Authed<T: Transport + 'static> {
     transport: &'static T,
-    token: RwLock<Option<Token>>,
+    pub token: RwLock<Option<Token>>,
     refresh_gate: tokio::sync::Mutex<()>,
 }
 

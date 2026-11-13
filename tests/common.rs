@@ -4,12 +4,12 @@ use std::sync::RwLock;
 
 pub struct MockUpstream {}
 
-pub const VALID_TOKEN: Token = "Valid Token";
-pub const INVALID_TOKEN: Token = "Invalid Token";
+pub const VALID_TOKEN: &str = "Valid Token";
+pub const INVALID_TOKEN: &str = "Invalid Token";
 
 impl Transport for MockUpstream {
     async fn login(&self) -> Result<Token, ApiError> {
-        Ok(Token::from("Valid Token"))
+        Ok(Token::new(String::from(VALID_TOKEN)))
     }
 
     async fn sensor_data(

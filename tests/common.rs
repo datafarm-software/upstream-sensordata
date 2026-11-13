@@ -18,8 +18,8 @@ impl Transport for MockUpstream {
         _body: SensorDataRequest,
     ) -> tonic::Result<SensorDataResponse, ApiError> {
         Err(ApiError::Upstream {
-            status: reqwest::StatusCode::NOT_IMPLEMENTED,
-            body: "not implemented".to_string(),
+            status: reqwest::StatusCode::UNAUTHORIZED,
+            body: "unauthorized".to_string(),
         })
     }
 }

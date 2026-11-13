@@ -12,7 +12,7 @@ struct Case {
     want_token: Token,
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "current_thread")]
 async fn test_lazy_login() {
     let cases = vec![Case {
         name: "login on first request received",
@@ -26,6 +26,6 @@ async fn test_lazy_login() {
         println!("case: {}", tc.name);
         let authed = upstream_api::Authed::new(tc.transport);
         let _got = authed.sensor_data(tonic::Request::new(tc.input)).await;
-        assert_eq!(*authed.token.read().unwrap(), Some(tc.want_token));
+        assert_eq!(authed.token.read().unwrap().clone(), Some(tc.want_token));
     }
 }

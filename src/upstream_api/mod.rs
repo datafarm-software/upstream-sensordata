@@ -64,6 +64,8 @@ impl<T: Transport + 'static> Authed<T> {
         self.refresh_gate.lock();
         let check_token = self.ensure_token().await;
         if &check_token != stale_token {
+            // Another thread refreshed while this one waited.
+            // Take the updated token.
             return Ok(check_token);
         }
         let new_token = self.transport.login().await?;
@@ -79,12 +81,9 @@ impl<T: Transport + 'static> SensorDataService for Authed<T> {
         req: Request<SensorDataRequest>,
     ) -> Result<Response<SensorDataResponse>, Status> {
         let token = self.ensure_token().await;
-        match self
-            .transport
-            .sensor_data(&token, req.into_inner().clone())
-            .await
-        {
-            Err(ApiError::Upstream { status, body })
+        let body = req.into_inner();
+        let res = match self.transport.sensor_data(&token, body.clone()).await {
+            Err(ApiError::Upstream { status, .. })
                 if status == StatusCode::BAD_REQUEST
                     || status == StatusCode::UNPROCESSABLE_ENTITY
                     || status == StatusCode::UNAUTHORIZED =>
@@ -93,7 +92,8 @@ impl<T: Transport + 'static> SensorDataService for Authed<T> {
                 self.transport.sensor_data(&token, body).await
             }
             other => other,
-        }
+        };
+        res.map(Response::new).map_err(Status::from)
     }
 }
 

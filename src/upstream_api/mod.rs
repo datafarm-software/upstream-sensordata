@@ -59,6 +59,17 @@ impl<T: Transport + 'static> Authed<T> {
             None => Token::new(String::from("")),
         }
     }
+
+    async fn refresh(&self, stale_token: &Token) -> Result<Token, ApiError> {
+        self.refresh_gate.lock();
+        let check_token = self.ensure_token().await;
+        if &check_token != stale_token {
+            return Ok(check_token);
+        }
+        let new_token = self.transport.login().await?;
+        *self.token.write().unwrap() = Some(new_token.clone());
+        Ok(new_token)
+    }
 }
 
 #[tonic::async_trait]
@@ -75,9 +86,10 @@ impl<T: Transport + 'static> SensorDataService for Authed<T> {
         {
             Err(ApiError::Upstream { status, body })
                 if status == StatusCode::BAD_REQUEST
-                    || status == StatusCode::UNPROCESSABLE_ENTITY =>
+                    || status == StatusCode::UNPROCESSABLE_ENTITY
+                    || status == StatusCode::UNAUTHORIZED =>
             {
-                let token = self.refresh(Some(&token)).await?;
+                let token = self.refresh(&token).await?;
                 self.transport.sensor_data(&token, body).await
             }
             other => other,

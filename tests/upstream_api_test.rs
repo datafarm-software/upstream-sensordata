@@ -1,8 +1,8 @@
-use probe_schedule_client::sensor_data::sensor_data_service_server::SensorDataService;
+use upstream_sensordata::sensor_data::sensor_data_service_server::SensorDataService;
 mod common;
 use common::MockUpstream;
-use probe_schedule_client::sensor_data::SensorDataRequest;
-use probe_schedule_client::upstream_api;
+use upstream_sensordata::sensor_data::SensorDataRequest;
+use upstream_sensordata::upstream_api;
 use upstream_api::Token;
 
 struct Case {

@@ -1,5 +1,5 @@
-use probe_schedule_client::sensor_data::{SensorDataRequest, SensorDataResponse};
-use probe_schedule_client::upstream_api::{ApiError, Token, Transport};
+use upstream_sensordata::sensor_data::{SensorDataRequest, SensorDataResponse};
+use upstream_sensordata::upstream_api::{ApiError, Token, Transport};
 use std::sync::RwLock;
 
 pub struct MockUpstream {}

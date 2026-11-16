@@ -42,17 +42,19 @@ async fn test_lazy_login() {
             want_token: Token::new(String::from(common::VALID_TOKEN)),
             threads: 5,
         },
+        Case {
+            name: "login once across more threads requiring login",
+            want_token: Token::new(String::from(common::VALID_TOKEN)),
+            threads: 50,
+        },
     ];
     for tc in cases {
         println!("case: {}", tc.name);
-        {
-            let authed = upstream_api::Authed::new(&*MOCK_TRANSPORT);
-            let futs =
-                (0..tc.threads).map(|_| authed.sensor_data(tonic::Request::new(INPUT.clone())));
-            let _results = futures::future::join_all(futs).await;
-            assert_eq!(authed.token.read().unwrap().clone(), Some(tc.want_token));
-            assert_eq!(MOCK_TRANSPORT.login_count(), 1);
-            MOCK_TRANSPORT.reset_login_count();
-        }
+        let authed = upstream_api::Authed::new(&*MOCK_TRANSPORT);
+        let futs = (0..tc.threads).map(|_| authed.sensor_data(tonic::Request::new(INPUT.clone())));
+        let _results = futures::future::join_all(futs).await;
+        assert_eq!(authed.token.read().unwrap().clone(), Some(tc.want_token));
+        assert_eq!(MOCK_TRANSPORT.login_count(), 1);
+        MOCK_TRANSPORT.reset_login_count();
     }
 }

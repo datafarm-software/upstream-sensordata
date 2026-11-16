@@ -22,6 +22,7 @@ impl<'a> MockUpstream<'a> {
 impl<'a> Transport for MockUpstream<'a> {
     async fn login(&self) -> Result<Token, ApiError> {
         self.login_called.fetch_add(1, Ordering::SeqCst);
+        tokio::task::yield_now().await;
         Ok(Token::new(String::from(VALID_TOKEN)))
     }
 

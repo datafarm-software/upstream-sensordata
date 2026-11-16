@@ -2,18 +2,22 @@ syntax = "proto3";
 
 package sensor_data.v1;
 
+import "google/protobuf/timestamp.proto";
+
 service SensorDataService {
   rpc SensorData(SensorDataRequest) returns (SensorDataResponse) {}
 }
 
 message SensorDataRequest {
   string device_id = 1 [json_name = "deviceId"];
+  google.protobuf.Timestamp start = 2;
+  google.protobuf.Timestamp stop = 3;
 }
 
 message SensorData {
   string device_id = 1 [json_name = "deviceId"];
   map<string, double> sensor_data = 2 [json_name = "sensorData"];
-  string timestamp = 3;
+  google.protobuf.Timestamp timestamp = 3;
 }
 
 message SensorDataResponse {

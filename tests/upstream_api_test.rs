@@ -3,6 +3,7 @@ use std::sync::LazyLock;
 use upstream_sensordata::sensor_data::sensor_data_service_server::SensorDataService;
 mod common;
 use common::MockUpstream;
+use std::sync::atomic::AtomicUsize;
 use upstream_api::Token;
 use upstream_sensordata::sensor_data::{SensorData, SensorDataRequest};
 use upstream_sensordata::upstream_api;
@@ -20,25 +21,37 @@ static MOCK_DATA: LazyLock<SensorData> = LazyLock::new(|| SensorData {
 });
 
 static MOCK_TRANSPORT: LazyLock<MockUpstream> = LazyLock::new(|| MockUpstream {
+    login_called: AtomicUsize::new(0),
     mock_data: &MOCK_DATA,
 });
+
 static INPUT: LazyLock<SensorDataRequest> = LazyLock::new(|| SensorDataRequest {
     device_id: "device1".to_string(),
 });
 
 #[tokio::test(flavor = "current_thread")]
 async fn test_lazy_login() {
-    let cases = vec![Case {
-        name: "login on first request received",
-        want_token: Token::new(String::from(common::VALID_TOKEN)),
-        threads: 1,
-    }];
+    let cases = vec![
+        Case {
+            name: "login on first request received",
+            want_token: Token::new(String::from(common::VALID_TOKEN)),
+            threads: 1,
+        },
+        Case {
+            name: "login once across multiple threads requiring login",
+            want_token: Token::new(String::from(common::VALID_TOKEN)),
+            threads: 5,
+        },
+    ];
     for tc in cases {
         println!("case: {}", tc.name);
-        let authed = upstream_api::Authed::new(&*MOCK_TRANSPORT);
-        let futs = (0..tc.threads).map(|_| authed.sensor_data(tonic::Request::new(INPUT.clone())));
-        let _results = futures::future::join_all(futs).await;
-
-        assert_eq!(authed.token.read().unwrap().clone(), Some(tc.want_token));
+        {
+            let authed = upstream_api::Authed::new(&*MOCK_TRANSPORT);
+            let futs =
+                (0..tc.threads).map(|_| authed.sensor_data(tonic::Request::new(INPUT.clone())));
+            let _results = futures::future::join_all(futs).await;
+            assert_eq!(authed.token.read().unwrap().clone(), Some(tc.want_token));
+            assert_eq!(MOCK_TRANSPORT.login_count(), 1);
+        }
     }
 }

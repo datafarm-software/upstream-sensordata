@@ -61,7 +61,7 @@ impl<T: Transport + 'static> Authed<T> {
     }
 
     async fn refresh(&self, stale_token: &Token) -> Result<Token, ApiError> {
-        self.refresh_gate.lock();
+        let _guard = self.refresh_gate.lock();
         let check_token = self.ensure_token().await;
         if &check_token != stale_token {
             // Another thread refreshed while this one waited.

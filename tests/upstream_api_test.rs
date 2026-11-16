@@ -8,10 +8,9 @@ use upstream_sensordata::sensor_data::{SensorData, SensorDataRequest};
 use upstream_sensordata::upstream_api;
 
 struct Case {
-    transport: &'static MockUpstream<'static>,
-    input: SensorDataRequest,
     name: &'static str,
     want_token: Token,
+    threads: usize,
 }
 
 static MOCK_DATA: LazyLock<SensorData> = LazyLock::new(|| SensorData {
@@ -23,21 +22,23 @@ static MOCK_DATA: LazyLock<SensorData> = LazyLock::new(|| SensorData {
 static MOCK_TRANSPORT: LazyLock<MockUpstream> = LazyLock::new(|| MockUpstream {
     mock_data: &MOCK_DATA,
 });
+static INPUT: LazyLock<SensorDataRequest> = LazyLock::new(|| SensorDataRequest {
+    device_id: "device1".to_string(),
+});
 
 #[tokio::test(flavor = "current_thread")]
 async fn test_lazy_login() {
     let cases = vec![Case {
         name: "login on first request received",
-        transport: &MOCK_TRANSPORT,
         want_token: Token::new(String::from(common::VALID_TOKEN)),
-        input: SensorDataRequest {
-            device_id: "device1".to_string(),
-        },
+        threads: 1,
     }];
     for tc in cases {
         println!("case: {}", tc.name);
-        let authed = upstream_api::Authed::new(tc.transport);
-        let _got = authed.sensor_data(tonic::Request::new(tc.input)).await;
+        let authed = upstream_api::Authed::new(&*MOCK_TRANSPORT);
+        let futs = (0..tc.threads).map(|_| authed.sensor_data(tonic::Request::new(INPUT.clone())));
+        let _results = futures::future::join_all(futs).await;
+
         assert_eq!(authed.token.read().unwrap().clone(), Some(tc.want_token));
     }
 }

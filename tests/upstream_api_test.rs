@@ -52,6 +52,7 @@ async fn test_lazy_login() {
             let _results = futures::future::join_all(futs).await;
             assert_eq!(authed.token.read().unwrap().clone(), Some(tc.want_token));
             assert_eq!(MOCK_TRANSPORT.login_count(), 1);
+            MOCK_TRANSPORT.reset_login_count();
         }
     }
 }

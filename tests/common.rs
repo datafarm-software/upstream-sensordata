@@ -14,6 +14,9 @@ impl<'a> MockUpstream<'a> {
     pub fn login_count(&self) -> usize {
         self.login_called.load(Ordering::SeqCst)
     }
+    pub fn reset_login_count(&self) {
+        self.login_called.store(0, Ordering::SeqCst);
+    }
 }
 
 impl<'a> Transport for MockUpstream<'a> {

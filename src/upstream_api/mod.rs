@@ -1,10 +1,13 @@
 use crate::sensor_data::sensor_data_service_server::SensorDataService;
 use crate::sensor_data::{SensorDataRequest, SensorDataResponse};
+use reading::{Column, Entity as Reading};
 use reqwest::StatusCode;
+use sea_orm::DatabaseConnection;
+use sea_orm::entity::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::future::Future;
 use std::sync::RwLock;
-use tonic::{Request, Response, Result, Status};
+use tonic::{Code, Request, Response, Result, Status};
 include!("upstream_api_error.rs");
 
 pub mod probe_schedule;
@@ -39,18 +42,36 @@ pub trait Transport: Send + Sync {
 }
 
 pub struct Authed<T: Transport + 'static> {
-    transport: &'static T,
-    pub token: RwLock<Option<Token>>,
     refresh_gate: tokio::sync::Mutex<()>,
+    pub token: RwLock<Option<Token>>,
+    db: DatabaseConnection,
+    transport: &'static T,
 }
 
+#[sea_orm::model]
+#[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel)]
+#[sea_orm(table_name = "block_list")]
+pub struct BlockList {
+    #[sea_orm(primary_key)]
+    pub id: i32,
+    pub device_id: String,
+    pub block_list: String,
+}
+
+impl ActiveModelBehaviour for ActiveModel {}
+
 impl<T: Transport + 'static> Authed<T> {
-    pub fn new(t: &'static T) -> Self {
+    pub fn new(t: &'static T, db: DatabaseConnection) -> Self {
         Authed {
             transport: t,
             token: RwLock::default(),
+            db: db,
             refresh_gate: tokio::sync::Mutex::default(),
         }
+    }
+
+    async fn get_block_list(&self, device_id: String) -> Result<String, Code> {
+        let bl = BlockList::filter(Column::DeviceId.eq(device_id)).await;
     }
 
     async fn ensure_token(&self) -> Token {
@@ -82,7 +103,19 @@ impl<T: Transport + 'static> SensorDataService for Authed<T> {
     ) -> Result<Response<SensorDataResponse>, Status> {
         let token = self.ensure_token().await;
         let body = req.into_inner();
-        let res = match self.transport.sensor_data(&token, body.clone()).await {
+        let block = self.get_block_list(body.device_id);
+        let res = match self
+            .transport
+            .sensor_data(
+                &token,
+                SensorDataRequest {
+                    device_id: block,
+                    start: body.start,
+                    stop: body.stop,
+                },
+            )
+            .await
+        {
             Err(ApiError::Upstream { status, .. })
                 if status == StatusCode::BAD_REQUEST
                     || status == StatusCode::UNPROCESSABLE_ENTITY

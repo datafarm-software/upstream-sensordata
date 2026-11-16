@@ -19,6 +19,7 @@ thiserror = "2.0.21"
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 futures = "0.3.34"
 prost-types = "0.14.6"
+sea-orm = { version = "2.0.0", features = [ "sqlx-sqlite", "runtime-tokio", "macros" ] }
 
 [dev-dependencies]
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }

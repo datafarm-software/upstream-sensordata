@@ -1,13 +1,14 @@
-use upstream_sensordata::sensor_data::{SensorDataRequest, SensorDataResponse};
+use upstream_sensordata::sensor_data::{SensorData, SensorDataRequest, SensorDataResponse};
 use upstream_sensordata::upstream_api::{ApiError, Token, Transport};
-use std::sync::RwLock;
 
-pub struct MockUpstream {}
+pub struct MockUpstream<'a> {
+    pub mock_data: &'a SensorData,
+}
 
 pub const VALID_TOKEN: &str = "Valid Token";
 pub const INVALID_TOKEN: &str = "Invalid Token";
 
-impl Transport for MockUpstream {
+impl<'a> Transport for MockUpstream<'a> {
     async fn login(&self) -> Result<Token, ApiError> {
         Ok(Token::new(String::from(VALID_TOKEN)))
     }

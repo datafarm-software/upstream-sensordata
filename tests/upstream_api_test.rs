@@ -1,22 +1,34 @@
+use std::collections::HashMap;
+use std::sync::LazyLock;
 use upstream_sensordata::sensor_data::sensor_data_service_server::SensorDataService;
 mod common;
 use common::MockUpstream;
-use upstream_sensordata::sensor_data::SensorDataRequest;
-use upstream_sensordata::upstream_api;
 use upstream_api::Token;
+use upstream_sensordata::sensor_data::{SensorData, SensorDataRequest};
+use upstream_sensordata::upstream_api;
 
 struct Case {
-    transport: &'static MockUpstream,
+    transport: &'static MockUpstream<'static>,
     input: SensorDataRequest,
     name: &'static str,
     want_token: Token,
 }
 
+static MOCK_DATA: LazyLock<SensorData> = LazyLock::new(|| SensorData {
+    device_id: "device1".to_string(),
+    timestamp: "2026-11-16T08:00:00Z".to_string(),
+    sensor_data: HashMap::from([("temperature".to_string(), 23.00)]),
+});
+
+static MOCK_TRANSPORT: LazyLock<MockUpstream> = LazyLock::new(|| MockUpstream {
+    mock_data: &MOCK_DATA,
+});
+
 #[tokio::test(flavor = "current_thread")]
 async fn test_lazy_login() {
     let cases = vec![Case {
         name: "login on first request received",
-        transport: &MockUpstream {},
+        transport: &MOCK_TRANSPORT,
         want_token: Token::new(String::from(common::VALID_TOKEN)),
         input: SensorDataRequest {
             device_id: "device1".to_string(),

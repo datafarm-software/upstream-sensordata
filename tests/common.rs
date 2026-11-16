@@ -30,9 +30,15 @@ impl<'a> Transport for MockUpstream<'a> {
         token: &Token,
         _body: SensorDataRequest,
     ) -> tonic::Result<SensorDataResponse, ApiError> {
-        Err(ApiError::Upstream {
-            status: reqwest::StatusCode::UNAUTHORIZED,
-            body: "unauthorized".to_string(),
-        })
+        if *token == Token::new(String::from(VALID_TOKEN)) {
+            Ok(SensorDataResponse {
+                response: vec![self.mock_data.clone()],
+            })
+        } else {
+            Err(ApiError::Upstream {
+                status: reqwest::StatusCode::UNAUTHORIZED,
+                body: "unauthorized".to_string(),
+            })
+        }
     }
 }

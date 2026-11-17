@@ -3,6 +3,17 @@ use serde::{Deserialize, Serialize};
 use std::time::Duration;
 use tonic::Result;
 
+#[derive(Serialize)]
+pub struct RestLoginBody<'a> {
+    username: &'a str,
+    password: &'a str,
+}
+
+#[derive(Deserialize)]
+pub struct RestLoginResponse {
+    pub token: String,
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Opts {
     pub base_url: String,

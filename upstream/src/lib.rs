@@ -1,44 +1,6 @@
-use crate::sensor_data::sensor_data_service_server::SensorDataService;
-use crate::sensor_data::{SensorDataRequest, SensorDataResponse};
-use reading::{Column, Entity as Reading};
-use reqwest::StatusCode;
-use sea_orm::DatabaseConnection;
-use sea_orm::entity::prelude::*;
-use serde::{Deserialize, Serialize};
-use std::future::Future;
-use std::sync::RwLock;
-use tonic::{Code, Request, Response, Result, Status};
-include!("upstream_api_error.rs");
-
-pub mod probe_schedule;
-
-#[derive(Clone, PartialEq, Eq)]
-pub struct Token(std::sync::Arc<str>);
-
-impl Token {
-    pub fn new(s: String) -> Self {
-        Self(s.into())
-    }
-    pub fn as_str(&self) -> &str {
-        &self.0
-    }
-}
-
-// keep secrets out of logs
-impl std::fmt::Debug for Token {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str("Token(***)")
-    }
-}
-
-pub trait Transport: Send + Sync {
-    fn login(&self) -> impl Future<Output = Result<Token, ApiError>> + Send;
-
-    fn sensor_data(
-        &self,
-        token: &Token,
-        body: SensorDataRequest,
-    ) -> impl Future<Output = Result<SensorDataResponse, ApiError>> + Send;
+pub mod upstream_api;
+pub mod sensor_data {
+    include!("../generated/rust/sensor_data/v1/sensor_data.v1.rs");
 }
 
 pub struct Authed<T: Transport + 'static> {
@@ -48,30 +10,18 @@ pub struct Authed<T: Transport + 'static> {
     transport: &'static T,
 }
 
-#[sea_orm::model]
-#[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel)]
-#[sea_orm(table_name = "block_list")]
-pub struct BlockList {
-    #[sea_orm(primary_key)]
-    pub id: i32,
-    pub device_id: String,
-    pub block_list: String,
-}
-
-impl ActiveModelBehaviour for ActiveModel {}
-
 impl<T: Transport + 'static> Authed<T> {
     pub fn new(t: &'static T, db: DatabaseConnection) -> Self {
         Authed {
             transport: t,
             token: RwLock::default(),
-            db: db,
+            db,
             refresh_gate: tokio::sync::Mutex::default(),
         }
     }
 
     async fn get_block_list(&self, device_id: String) -> Result<String, Code> {
-        let bl = BlockList::filter(Column::DeviceId.eq(device_id)).await;
+        BlockList::filter(Column::DeviceId.eq(device_id)).await
     }
 
     async fn ensure_token(&self) -> Token {
@@ -130,13 +80,3 @@ impl<T: Transport + 'static> SensorDataService for Authed<T> {
     }
 }
 
-#[derive(Serialize)]
-pub struct RestLoginBody<'a> {
-    username: &'a str,
-    password: &'a str,
-}
-
-#[derive(Deserialize)]
-pub struct RestLoginResponse {
-    pub token: String,
-}

@@ -4,8 +4,8 @@
 __pycache__
 .vscode
 *.py
-upstream/generated
+*generated*
 
 # Added by cargo
 
-/target
+*target*

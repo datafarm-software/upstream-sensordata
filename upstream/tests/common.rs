@@ -1,6 +1,10 @@
 use std::sync::atomic::{AtomicUsize, Ordering};
-use upstream_sensordata::sensor_data::{SensorData, SensorDataRequest, SensorDataResponse};
-use upstream_sensordata::upstream_api::{ApiError, Token, Transport};
+use upstream_sensordata::upstream::api::{SensorData, SensorDataRequest, SensorDataResponse};
+use upstream_sensordata::upstream::api::{
+    error::ApiError,
+    token::Token, 
+    transport::Transport,
+};
 
 pub struct MockUpstream<'a> {
     pub mock_data: &'a SensorData,

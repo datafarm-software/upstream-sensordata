@@ -840,6 +840,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "entity"
+version = "0.1.0"
+
+[[package]]
 name = "enum-as-inner"
 version = "0.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3561,7 +3565,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8ecb6da28b8a351d773b68d5825ac39017e680750f980f3a1a85cd8dd28a47c1"
 
 [[package]]
-name = "upstream-sensordata"
+name = "upstream-api"
 version = "0.1.0"
 dependencies = [
  "async-trait",
@@ -3581,6 +3585,10 @@ dependencies = [
  "tonic",
  "tonic-prost",
 ]
+
+[[package]]
+name = "upstream-sensordata"
+version = "0.1.0"
 
 [[package]]
 name = "url"

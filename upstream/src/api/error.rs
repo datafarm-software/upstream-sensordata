@@ -1,3 +1,6 @@
+use reqwest::StatusCode;
+use tonic::Status;
+
 #[derive(Debug, thiserror::Error)]
 pub enum ApiError {
     #[error("upstream request failed: {0}")]

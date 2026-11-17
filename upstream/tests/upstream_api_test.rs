@@ -1,14 +1,13 @@
 use std::collections::HashMap;
 use std::sync::LazyLock;
 use std::time::SystemTime;
-use upstream_sensordata::sensor_data::sensor_data_service_server::SensorDataService;
+use upstream_sensordata::api::sensor_data::sensor_data_service_server::SensorDataService;
 mod common;
 use common::MockUpstream;
 use prost_types::Timestamp;
 use std::sync::atomic::AtomicUsize;
-use upstream_api::Token;
-use upstream_sensordata::sensor_data::{SensorData, SensorDataRequest};
-use upstream_sensordata::upstream_api;
+use upstream_sensordata::upstream::api::token::Token;
+use upstream_sensordata::api::sensor_data::{SensorData, SensorDataRequest};
 
 struct LoginCase {
     name: &'static str,

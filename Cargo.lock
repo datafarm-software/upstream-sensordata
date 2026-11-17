@@ -3590,6 +3590,7 @@ dependencies = [
 name = "upstream-sensordata"
 version = "0.1.0"
 dependencies = [
+ "entity",
  "upstream",
 ]
 

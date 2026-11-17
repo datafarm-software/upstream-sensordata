@@ -8,3 +8,4 @@ members = [".", "upstream", "entity"]
 
 [dependencies]
 upstream = { path = "upstream" }
+entity = { path = "entity" }

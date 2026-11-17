@@ -1,4 +1,6 @@
-use crate::upstream_api::{ApiError, RestLoginBody, RestLoginResponse, Token, Transport};
+use super::error::ApiError
+use super::token::Token; 
+use super::transport::Transport;
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 use tonic::Result;

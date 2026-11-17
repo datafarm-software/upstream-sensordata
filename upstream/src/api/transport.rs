@@ -9,7 +9,7 @@ pub trait Transport: Send + Sync {
     fn sensor_data(
         &self,
         token: &Token,
-        body: SensorDataRequest,
+        body: &SensorDataRequest,
     ) -> impl Future<Output = Result<SensorDataResponse, ApiError>> + Send;
 }
 

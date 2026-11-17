@@ -5,7 +5,7 @@ use crate::sensor_data::sensor_data_service_server::SensorDataService;
 use crate::sensor_data::{SensorDataRequest, SensorDataResponse};
 use reqwest::StatusCode;
 use std::sync::RwLock;
-use tonic::{Code, Request, Response, Status};
+use tonic::{Request, Response, Status};
 pub mod api;
 pub mod sensor_data {
     include!("../generated/rust/sensor_data/v1/sensor_data.v1.rs");
@@ -14,22 +14,16 @@ pub mod sensor_data {
 pub struct Authed<T: Transport + 'static> {
     refresh_gate: tokio::sync::Mutex<()>,
     pub token: RwLock<Option<Token>>,
-    db: DatabaseConnection,
     transport: &'static T,
 }
 
 impl<T: Transport + 'static> Authed<T> {
-    pub fn new(t: &'static T, db: DatabaseConnection) -> Self {
+    pub fn new(t: &'static T) -> Self {
         Authed {
             transport: t,
             token: RwLock::default(),
-            db,
             refresh_gate: tokio::sync::Mutex::default(),
         }
-    }
-
-    async fn get_block_list(&self, device_id: String) -> Result<String, Code> {
-        BlockList::filter(Column::DeviceId.eq(device_id)).await
     }
 
     async fn ensure_token(&self) -> Token {
@@ -61,26 +55,14 @@ impl<T: Transport + 'static> SensorDataService for Authed<T> {
     ) -> Result<Response<SensorDataResponse>, Status> {
         let token = self.ensure_token().await;
         let body = req.into_inner();
-        let block = self.get_block_list(body.device_id);
-        let res = match self
-            .transport
-            .sensor_data(
-                &token,
-                SensorDataRequest {
-                    device_id: block,
-                    start: body.start,
-                    stop: body.stop,
-                },
-            )
-            .await
-        {
+        let res = match self.transport.sensor_data(&token, &body).await {
             Err(ApiError::Upstream { status, .. })
                 if status == StatusCode::BAD_REQUEST
                     || status == StatusCode::UNPROCESSABLE_ENTITY
                     || status == StatusCode::UNAUTHORIZED =>
             {
                 let token = self.refresh(&token).await?;
-                self.transport.sensor_data(&token, body).await
+                self.transport.sensor_data(&token, &body).await
             }
             other => other,
         };

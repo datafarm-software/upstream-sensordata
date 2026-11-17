@@ -3589,6 +3589,9 @@ dependencies = [
 [[package]]
 name = "upstream-sensordata"
 version = "0.1.0"
+dependencies = [
+ "upstream",
+]
 
 [[package]]
 name = "url"

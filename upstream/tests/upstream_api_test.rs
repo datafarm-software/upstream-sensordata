@@ -1,13 +1,14 @@
 use std::collections::HashMap;
 use std::sync::LazyLock;
 use std::time::SystemTime;
-use upstream_sensordata::api::sensor_data::sensor_data_service_server::SensorDataService;
+use upstream::Authed;
+use upstream::sensor_data::sensor_data_service_server::SensorDataService;
 mod common;
 use common::MockUpstream;
 use prost_types::Timestamp;
 use std::sync::atomic::AtomicUsize;
-use upstream_sensordata::upstream::api::token::Token;
-use upstream_sensordata::api::sensor_data::{SensorData, SensorDataRequest};
+use upstream::api::token::Token;
+use upstream::sensor_data::{SensorData, SensorDataRequest};
 
 struct LoginCase {
     name: &'static str,
@@ -53,7 +54,7 @@ async fn test_lazy_login() {
     ];
     for tc in cases {
         println!("case: {}", tc.name);
-        let authed = upstream_api::Authed::new(&*MOCK_TRANSPORT);
+        let authed = Authed::new(&*MOCK_TRANSPORT);
         let futs = (0..tc.threads).map(|_| authed.sensor_data(tonic::Request::new(INPUT.clone())));
         let _results = futures::future::join_all(futs).await;
         assert_eq!(authed.token.read().unwrap().clone(), Some(tc.want_token));
@@ -105,7 +106,7 @@ async fn test_sensor_data() {
     ];
     for tc in cases {
         println!("case: {}", tc.name);
-        let authed = upstream_api::Authed::new(&*MOCK_TRANSPORT);
+        let authed = Authed::new(&*MOCK_TRANSPORT);
         let res = authed.sensor_data(tonic::Request::new(tc.input)).await;
         let (msg, code) = match res {
             Ok(resp) => (Some(resp.into_inner()), tonic::Code::Ok),

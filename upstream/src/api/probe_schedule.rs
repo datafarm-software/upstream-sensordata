@@ -1,5 +1,5 @@
-use super::error::ApiError
-use super::token::Token; 
+use super::error::ApiError;
+use super::token::Token;
 use super::transport::Transport;
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
@@ -74,7 +74,7 @@ impl Transport for PSClient {
     async fn sensor_data(
         &self,
         _token: &Token,
-        _body: crate::sensor_data::SensorDataRequest,
+        _body: &crate::sensor_data::SensorDataRequest,
     ) -> Result<crate::sensor_data::SensorDataResponse, ApiError> {
         todo!()
     }

@@ -1,10 +1,6 @@
 use std::sync::atomic::{AtomicUsize, Ordering};
-use upstream_sensordata::upstream::api::{SensorData, SensorDataRequest, SensorDataResponse};
-use upstream_sensordata::upstream::api::{
-    error::ApiError,
-    token::Token, 
-    transport::Transport,
-};
+use upstream::api::{error::ApiError, token::Token, transport::Transport};
+use upstream::sensor_data::{SensorData, SensorDataRequest, SensorDataResponse};
 
 pub struct MockUpstream<'a> {
     pub mock_data: &'a SensorData,
@@ -33,7 +29,7 @@ impl<'a> Transport for MockUpstream<'a> {
     async fn sensor_data(
         &self,
         token: &Token,
-        _body: SensorDataRequest,
+        _body: &SensorDataRequest,
     ) -> tonic::Result<SensorDataResponse, ApiError> {
         if *token == Token::new(String::from(VALID_TOKEN)) {
             Ok(SensorDataResponse {

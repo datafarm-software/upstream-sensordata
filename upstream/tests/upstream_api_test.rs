@@ -5,7 +5,9 @@ use upstream::Authed;
 use upstream::sensor_data::sensor_data_service_server::SensorDataService;
 mod common;
 use common::MockUpstream;
+use entity::prelude::DeviceInfo;
 use prost_types::Timestamp;
+use sea_orm::Database;
 use std::sync::atomic::AtomicUsize;
 use upstream::api::token::Token;
 use upstream::sensor_data::{SensorData, SensorDataRequest};
@@ -72,6 +74,12 @@ struct SensorDataCase {
 
 #[tokio::test(flavor = "current_thread")]
 async fn test_sensor_data() {
+    let db = &Database::connect("sqlite::memory:").await.unwrap();
+    db.get_schema_builder()
+        .register(DeviceInfo)
+        .apply(db)
+        .await
+        .unwrap();
     let cases = vec![
         SensorDataCase {
             name: "successfully get sensor data",

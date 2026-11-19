@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::sync::RwLock;
 use std::sync::{Arc, LazyLock};
 use std::time::SystemTime;
 use upstream::Authed;
@@ -17,6 +18,7 @@ use upstream::sensor_data::{SensorData, SensorDataRequest};
 struct LoginCase {
     name: &'static str,
     want_token: Token,
+    starting_token: Token,
     threads: usize,
 }
 
@@ -32,17 +34,26 @@ async fn test_lazy_login() {
         LoginCase {
             name: "login on first request received",
             want_token: Token::new(String::from(common::VALID_TOKEN)),
+            starting_token: Token::new(String::from("")),
             threads: 1,
         },
         LoginCase {
             name: "login once across multiple threads requiring login",
             want_token: Token::new(String::from(common::VALID_TOKEN)),
+            starting_token: Token::new(String::from("")),
             threads: 5,
         },
         LoginCase {
             name: "login once across more threads requiring login",
             want_token: Token::new(String::from(common::VALID_TOKEN)),
+            starting_token: Token::new(String::from("")),
             threads: 50,
+        },
+        LoginCase {
+            name: "login because current token is invalid",
+            want_token: Token::new(String::from(common::VALID_TOKEN)),
+            starting_token: Token::new(String::from(common::INVALID_TOKEN)),
+            threads: 10,
         },
     ];
     let login_called = Arc::new(AtomicUsize::new(0));
@@ -53,10 +64,11 @@ async fn test_lazy_login() {
     });
     for tc in cases {
         println!("case: {}", tc.name);
-        let authed = Authed::new(MockUpstream {
+        let mut authed = Authed::new(MockUpstream {
             login_called: login_called.clone(),
             mock_data: mock_data.clone(),
         });
+        authed.token = RwLock::new(Some(tc.starting_token));
         let futs = (0..tc.threads).map(|_| authed.sensor_data(tonic::Request::new(INPUT.clone())));
         let _results = futures::future::join_all(futs).await;
         assert_eq!(authed.token.read().unwrap().clone(), Some(tc.want_token));

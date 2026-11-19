@@ -11,15 +11,6 @@ pub struct MockUpstream {
 pub const VALID_TOKEN: &str = "Valid Token";
 pub const INVALID_TOKEN: &str = "Invalid Token";
 
-impl MockUpstream {
-    pub fn login_count(&self) -> usize {
-        self.login_called.load(Ordering::SeqCst)
-    }
-    pub fn reset_login_count(&self) {
-        self.login_called.store(0, Ordering::SeqCst);
-    }
-}
-
 impl Transport for MockUpstream {
     async fn login(&self) -> Result<Token, ApiError> {
         self.login_called.fetch_add(1, Ordering::SeqCst);

@@ -1,8 +1,10 @@
+use entity::device_info::Model;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use upstream::api::{error::ApiError, token::Token, transport::Transport};
-use upstream::sensor_data::{SensorData, SensorDataRequest, SensorDataResponse};
+use upstream::sensor_data::{SensorData, SensorDataResponse};
 
+#[derive(Default)]
 pub struct MockUpstream {
     pub mock_data: Arc<SensorData>,
     pub login_called: Arc<AtomicUsize>,
@@ -21,7 +23,7 @@ impl Transport for MockUpstream {
     async fn sensor_data(
         &self,
         token: &Token,
-        _body: &SensorDataRequest,
+        _body: &Model,
     ) -> tonic::Result<SensorDataResponse, ApiError> {
         if *token == Token::new(String::from(VALID_TOKEN)) {
             Ok(SensorDataResponse {

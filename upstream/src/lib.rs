@@ -1,9 +1,11 @@
-use crate::api::error::ApiError;
-use crate::api::token::Token;
-use crate::api::transport::Transport;
-use crate::sensor_data::sensor_data_service_server::SensorDataService;
-use crate::sensor_data::{SensorDataRequest, SensorDataResponse};
+use api::Query;
+use api::error::ApiError;
+use api::token::Token;
+use api::transport::Transport;
 use reqwest::StatusCode;
+use sea_orm::{DatabaseConnection, DbErr};
+use sensor_data::sensor_data_service_server::SensorDataService;
+use sensor_data::{SensorDataRequest, SensorDataResponse};
 use std::sync::RwLock;
 use tonic::{Request, Response, Status};
 
@@ -12,21 +14,15 @@ pub mod sensor_data {
     include!("../generated/rust/sensor_data/v1/sensor_data.v1.rs");
 }
 
+#[derive(Default)]
 pub struct Authed<T> {
-    refresh_gate: tokio::sync::Mutex<()>,
+    pub refresh_gate: tokio::sync::Mutex<()>,
     pub token: RwLock<Option<Token>>,
-    transport: T,
+    pub transport: T,
+    pub db: DatabaseConnection,
 }
 
 impl<T: Transport> Authed<T> {
-    pub fn new(t: T) -> Self {
-        Authed {
-            transport: t,
-            token: RwLock::default(),
-            refresh_gate: tokio::sync::Mutex::default(),
-        }
-    }
-
     async fn ensure_token(&self) -> Token {
         match self.token.read().unwrap().clone() {
             Some(t) => t,
@@ -59,14 +55,25 @@ where
     ) -> Result<Response<SensorDataResponse>, Status> {
         let token = self.ensure_token().await;
         let body = req.into_inner();
-        let res = match self.transport.sensor_data(&token, &body).await {
+        let di = match Query::find_device_info(&self.db, &body.device_id).await {
+            Ok(Some(di)) => di,
+            Ok(None) => return Err(Status::not_found("device not found")),
+            Err(e) => match e {
+                DbErr::RecordNotFound(msg) => return Err(Status::not_found(msg)),
+                _ => {
+                    println!("unexpected sql error: {e}");
+                    return Err(Status::internal("unexpected sql error"));
+                }
+            },
+        };
+        let res = match self.transport.sensor_data(&token, &di).await {
             Err(ApiError::Upstream { status, .. })
                 if status == StatusCode::BAD_REQUEST
                     || status == StatusCode::UNPROCESSABLE_ENTITY
                     || status == StatusCode::UNAUTHORIZED =>
             {
                 let token = self.refresh(&token).await?;
-                self.transport.sensor_data(&token, &body).await
+                self.transport.sensor_data(&token, &di).await
             }
             other => other,
         };

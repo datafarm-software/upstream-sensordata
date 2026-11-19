@@ -12,6 +12,7 @@ use prost_types::Timestamp;
 use sea_orm::Database;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use upstream::api::token::Token;
+use upstream::device_info::Db;
 use upstream::device_info::Mutation;
 use upstream::sensor_data::{SensorData, SensorDataRequest};
 
@@ -129,6 +130,7 @@ async fn test_sensor_data() {
             },
         },
     ];
+
     let db = Database::connect("sqlite::memory:").await.unwrap();
     db.get_schema_builder()
         .register(DeviceInfo)
@@ -173,4 +175,13 @@ async fn test_sensor_data() {
             assert_eq!(sd_vec, vec![Arc::unwrap_or_clone(mock_data.clone())]);
         }
     }
+}
+
+#[tokio::test]
+async fn db_auto_reconnects() {
+    let db = Db::new("sqlite::memory:").await.unwrap();
+    db.conn().await.close().await.unwrap();
+    assert!(db.conn().await.ping().await.is_err());
+    db.ensure_healthy().await.unwrap();
+    assert!(db.conn().await.ping().await.is_ok());
 }

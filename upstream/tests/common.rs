@@ -2,15 +2,15 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use upstream::api::{error::ApiError, token::Token, transport::Transport};
 use upstream::sensor_data::{SensorData, SensorDataRequest, SensorDataResponse};
 
-pub struct MockUpstream<'a> {
-    pub mock_data: &'a SensorData,
+pub struct MockUpstream {
+    pub mock_data: &SensorData,
     pub login_called: AtomicUsize,
 }
 
 pub const VALID_TOKEN: &str = "Valid Token";
 pub const INVALID_TOKEN: &str = "Invalid Token";
 
-impl<'a> MockUpstream<'a> {
+impl MockUpstream {
     pub fn login_count(&self) -> usize {
         self.login_called.load(Ordering::SeqCst)
     }
@@ -19,7 +19,7 @@ impl<'a> MockUpstream<'a> {
     }
 }
 
-impl<'a> Transport for MockUpstream<'a> {
+impl Transport for MockUpstream {
     async fn login(&self) -> Result<Token, ApiError> {
         self.login_called.fetch_add(1, Ordering::SeqCst);
         tokio::task::yield_now().await;

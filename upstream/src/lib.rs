@@ -3,7 +3,6 @@ use crate::api::token::Token;
 use crate::api::transport::Transport;
 use crate::sensor_data::sensor_data_service_server::SensorDataService;
 use crate::sensor_data::{SensorDataRequest, SensorDataResponse};
-use entity::prelude::DeviceInfo;
 use reqwest::StatusCode;
 use std::sync::RwLock;
 use tonic::{Request, Response, Status};
@@ -13,14 +12,14 @@ pub mod sensor_data {
     include!("../generated/rust/sensor_data/v1/sensor_data.v1.rs");
 }
 
-pub struct Authed<T: Transport + 'static> {
+pub struct Authed<T> {
     refresh_gate: tokio::sync::Mutex<()>,
     pub token: RwLock<Option<Token>>,
-    transport: &'static T,
+    transport: T,
 }
 
-impl<T: Transport + 'static> Authed<T> {
-    pub fn new(t: &'static T) -> Self {
+impl<T: Transport> Authed<T> {
+    pub fn new(t: T) -> Self {
         Authed {
             transport: t,
             token: RwLock::default(),
@@ -50,7 +49,10 @@ impl<T: Transport + 'static> Authed<T> {
 }
 
 #[tonic::async_trait]
-impl<T: Transport + 'static> SensorDataService for Authed<T> {
+impl<T> SensorDataService for Authed<T>
+where
+    T: Transport + Send + Sync + 'static,
+{
     async fn sensor_data(
         &self,
         req: Request<SensorDataRequest>,

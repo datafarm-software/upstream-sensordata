@@ -9,7 +9,7 @@ use api::token::Token;
 use api::transport::Transport;
 use device_info::Db;
 use reqwest::StatusCode;
-use sea_orm::{DatabaseConnection, DbErr};
+use sea_orm::DbErr;
 use sensor_data::sensor_data_service_server::SensorDataService;
 use sensor_data::{SensorDataRequest, SensorDataResponse};
 use std::sync::RwLock;

@@ -176,6 +176,6 @@ async fn db_auto_reconnects() {
     let db = Db::new("sqlite::memory:").await.unwrap();
     db.conn().await.close().await.unwrap();
     assert!(db.conn().await.ping().await.is_err());
-    db.ensure_healthy().await.unwrap();
+    db.conn_healthy().await.unwrap();
     assert!(db.conn().await.ping().await.is_ok());
 }

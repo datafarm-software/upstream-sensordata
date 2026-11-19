@@ -60,7 +60,7 @@ async fn check_status(resp: reqwest::Response) -> Result<reqwest::Response, ApiE
 }
 
 #[derive(Deserialize)]
-pub struct Response {
+pub struct PSResponse {
     pub success: bool,
     pub data: Data,
 }
@@ -108,11 +108,13 @@ impl Transport for PSClient {
         body: &DeviceInfo,
     ) -> Result<crate::sensor_data::SensorDataResponse, ApiError> {
         let url = format!("{0}/{1}/data", self.base_url, body.block_id);
-        let body = self
+        let resp: PSResponse = self
             .http
             .get(url)
             .header(AUTHORIZATION, format!("Bearer {0}", token.as_str()))
             .send()
+            .await?
+            .json::<PSResponse>()
             .await?;
     }
 }

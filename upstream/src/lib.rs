@@ -1,7 +1,13 @@
-use api::Query;
+pub mod api;
+pub mod device_info;
+pub mod sensor_data {
+    include!("../generated/rust/sensor_data/v1/sensor_data.v1.rs");
+}
+
 use api::error::ApiError;
 use api::token::Token;
 use api::transport::Transport;
+use device_info::Query;
 use reqwest::StatusCode;
 use sea_orm::{DatabaseConnection, DbErr};
 use sensor_data::sensor_data_service_server::SensorDataService;
@@ -9,11 +15,6 @@ use sensor_data::{SensorDataRequest, SensorDataResponse};
 use std::sync::RwLock;
 use tokio::sync::Mutex;
 use tonic::{Request, Response, Status};
-
-pub mod api;
-pub mod sensor_data {
-    include!("../generated/rust/sensor_data/v1/sensor_data.v1.rs");
-}
 
 pub struct Authed<T: Transport> {
     refresh_gate: Mutex<()>,

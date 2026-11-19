@@ -11,8 +11,8 @@ use entity::prelude::DeviceInfo;
 use prost_types::Timestamp;
 use sea_orm::Database;
 use std::sync::atomic::{AtomicUsize, Ordering};
-use upstream::api::Mutation;
 use upstream::api::token::Token;
+use upstream::device_info::Mutation;
 use upstream::sensor_data::{SensorData, SensorDataRequest};
 
 struct LoginCase {

@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::sync::LazyLock;
+use std::sync::{Arc, LazyLock};
 use std::time::SystemTime;
 use upstream::Authed;
 use upstream::sensor_data::sensor_data_service_server::SensorDataService;
@@ -9,7 +9,7 @@ use entity::device_info;
 use entity::prelude::DeviceInfo;
 use prost_types::Timestamp;
 use sea_orm::Database;
-use std::sync::atomic::AtomicUsize;
+use std::sync::atomic::{AtomicUsize, Ordering};
 use upstream::api::Mutation;
 use upstream::api::token::Token;
 use upstream::sensor_data::{SensorData, SensorDataRequest};
@@ -28,14 +28,6 @@ static INPUT: LazyLock<SensorDataRequest> = LazyLock::new(|| SensorDataRequest {
 
 #[tokio::test(flavor = "current_thread")]
 async fn test_lazy_login() {
-    let mock_upstream = MockUpstream {
-        login_called: AtomicUsize::new(0),
-        mock_data: &SensorData {
-            device_id: "device1".to_string(),
-            timestamp: Some(Timestamp::date_time(2026, 11, 16, 8, 0, 0).unwrap()),
-            sensor_data: HashMap::from([("temperature".to_string(), 23.00)]),
-        },
-    };
     let cases = vec![
         LoginCase {
             name: "login on first request received",
@@ -53,14 +45,23 @@ async fn test_lazy_login() {
             threads: 50,
         },
     ];
+    let login_called = Arc::new(AtomicUsize::new(0));
+    let mock_data = Arc::new(SensorData {
+        device_id: "device1".to_string(),
+        timestamp: Some(Timestamp::date_time(2026, 11, 16, 8, 0, 0).unwrap()),
+        sensor_data: HashMap::from([("temperature".to_string(), 23.00)]),
+    });
     for tc in cases {
         println!("case: {}", tc.name);
-        let authed = Authed::new(mock_upstream);
+        let authed = Authed::new(MockUpstream {
+            login_called: login_called.clone(),
+            mock_data: mock_data.clone(),
+        });
         let futs = (0..tc.threads).map(|_| authed.sensor_data(tonic::Request::new(INPUT.clone())));
         let _results = futures::future::join_all(futs).await;
         assert_eq!(authed.token.read().unwrap().clone(), Some(tc.want_token));
-        assert_eq!(mock_upstream.login_count(), 1);
-        mock_upstream.reset_login_count();
+        assert_eq!(login_called.clone().load(Ordering::SeqCst), 1);
+        login_called.clone().store(0, Ordering::SeqCst);
     }
 }
 
@@ -79,7 +80,7 @@ async fn test_sensor_data() {
         .apply(db)
         .await
         .unwrap();
-    let di = Mutation::create(
+    Mutation::create(
         db,
         device_info::Model {
             id: 0,
@@ -90,14 +91,6 @@ async fn test_sensor_data() {
     .await
     .unwrap();
 
-    let mock_upstream = MockUpstream {
-        login_called: AtomicUsize::new(0),
-        mock_data: &SensorData {
-            device_id: "device1".to_string(),
-            timestamp: Some(Timestamp::date_time(2026, 11, 16, 8, 0, 0).unwrap()),
-            sensor_data: HashMap::from([("temperature".to_string(), 23.00)]),
-        },
-    };
     let cases = vec![
         SensorDataCase {
             name: "successfully get sensor data",
@@ -130,9 +123,18 @@ async fn test_sensor_data() {
             },
         },
     ];
+    let login_called = Arc::new(AtomicUsize::new(0));
+    let mock_data = Arc::new(SensorData {
+        device_id: "device1".to_string(),
+        timestamp: Some(Timestamp::date_time(2026, 11, 16, 8, 0, 0).unwrap()),
+        sensor_data: HashMap::from([("temperature".to_string(), 23.00)]),
+    });
     for tc in cases {
         println!("case: {}", tc.name);
-        let authed = Authed::new(mock_upstream);
+        let authed = Authed::new(MockUpstream {
+            login_called: login_called.clone(),
+            mock_data: mock_data.clone(),
+        });
         let res = authed.sensor_data(tonic::Request::new(tc.input)).await;
         let (msg, code) = match res {
             Ok(resp) => (Some(resp.into_inner()), tonic::Code::Ok),
@@ -141,7 +143,7 @@ async fn test_sensor_data() {
         assert_eq!(tc.want_code, code);
         if !tc.want_empty {
             let sd_vec = msg.unwrap().response;
-            assert_eq!(sd_vec, vec![mock_upstream.mock_data.clone()]);
+            assert_eq!(sd_vec, vec![Arc::unwrap_or_clone(mock_data.clone())]);
         }
     }
 }

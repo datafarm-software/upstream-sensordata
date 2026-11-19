@@ -1,10 +1,11 @@
+use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use upstream::api::{error::ApiError, token::Token, transport::Transport};
 use upstream::sensor_data::{SensorData, SensorDataRequest, SensorDataResponse};
 
 pub struct MockUpstream {
-    pub mock_data: &SensorData,
-    pub login_called: AtomicUsize,
+    pub mock_data: Arc<SensorData>,
+    pub login_called: Arc<AtomicUsize>,
 }
 
 pub const VALID_TOKEN: &str = "Valid Token";
@@ -33,7 +34,7 @@ impl Transport for MockUpstream {
     ) -> tonic::Result<SensorDataResponse, ApiError> {
         if *token == Token::new(String::from(VALID_TOKEN)) {
             Ok(SensorDataResponse {
-                response: vec![self.mock_data.clone()],
+                response: vec![Arc::unwrap_or_clone(self.mock_data.clone())],
             })
         } else {
             Err(ApiError::Upstream {

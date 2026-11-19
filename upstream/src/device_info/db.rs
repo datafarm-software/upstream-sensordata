@@ -58,9 +58,9 @@ impl Db {
         self.conn.read().await.clone()
     }
 
-    pub async fn ensure_healthy(&self) -> Result<(), DbErr> {
+    pub async fn conn_healthy(&self) -> Result<DatabaseConnection, DbErr> {
         if self.conn().await.ping().await.is_ok() {
-            return Ok(());
+            return Ok(self.conn.read().await.clone());
         }
         let fresh = connect_with_retry(
             &self.url,
@@ -70,21 +70,19 @@ impl Db {
         )
         .await?;
         *self.conn.write().await = fresh;
-        Ok(())
+        Ok(self.conn.read().await.clone())
     }
 
     pub async fn find_device_info(
         &self,
         device_id: &String,
     ) -> Result<Option<device_info::Model>, DbErr> {
-        self.ensure_healthy().await?;
-        let conn = self.conn().await;
+        let conn = self.conn_healthy().await?;
         Query::find_device_info(&conn, device_id).await
     }
 
     pub async fn create(&self, di: device_info::Model) -> Result<device_info::ActiveModel, DbErr> {
-        self.ensure_healthy().await?;
-        let conn = self.conn().await;
+        let conn = self.conn_healthy().await?;
         Mutation::create(&conn, di).await
     }
 }

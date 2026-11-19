@@ -9,11 +9,9 @@ use common::MockUpstream;
 use entity::device_info;
 use entity::prelude::DeviceInfo;
 use prost_types::Timestamp;
-use sea_orm::Database;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use upstream::api::token::Token;
 use upstream::device_info::Db;
-use upstream::device_info::Mutation;
 use upstream::sensor_data::{SensorData, SensorDataRequest};
 
 struct LoginCase {
@@ -57,20 +55,18 @@ async fn test_lazy_login() {
             threads: 10,
         },
     ];
-    let db = Database::connect("sqlite::memory:").await.unwrap();
-    db.get_schema_builder()
+    let db = Db::new("sqlite::memory:").await.unwrap();
+    let conn = db.conn().await;
+    conn.get_schema_builder()
         .register(DeviceInfo)
-        .apply(&db)
+        .apply(&conn)
         .await
         .unwrap();
-    Mutation::create(
-        &db,
-        device_info::Model {
-            id: 0,
-            device_id: "device1".to_owned(),
-            block_id: "block1".to_owned(),
-        },
-    )
+    db.create(device_info::Model {
+        id: 0,
+        device_id: "device1".to_owned(),
+        block_id: "block1".to_owned(),
+    })
     .await
     .unwrap();
     let shared_db = Arc::new(db);
@@ -131,20 +127,18 @@ async fn test_sensor_data() {
         },
     ];
 
-    let db = Database::connect("sqlite::memory:").await.unwrap();
-    db.get_schema_builder()
+    let db = Db::new("sqlite::memory:").await.unwrap();
+    let conn = db.conn().await;
+    conn.get_schema_builder()
         .register(DeviceInfo)
-        .apply(&db)
+        .apply(&conn)
         .await
         .unwrap();
-    Mutation::create(
-        &db,
-        device_info::Model {
-            id: 0,
-            device_id: "device1".to_owned(),
-            block_id: "block1".to_owned(),
-        },
-    )
+    db.create(device_info::Model {
+        id: 0,
+        device_id: "device1".to_owned(),
+        block_id: "block1".to_owned(),
+    })
     .await
     .unwrap();
     let shared_db = Arc::new(db);

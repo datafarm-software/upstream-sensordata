@@ -1,4 +1,4 @@
-use crate::device_info::Query;
+use crate::device_info::{Mutation, Query};
 use ::entity::device_info;
 use sea_orm::{ConnectOptions, Database, DatabaseConnection, DbErr};
 use std::result::Result;
@@ -80,5 +80,11 @@ impl Db {
         self.ensure_healthy().await?;
         let conn = self.conn().await;
         Query::find_device_info(&conn, device_id).await
+    }
+
+    pub async fn create(&self, di: device_info::Model) -> Result<device_info::ActiveModel, DbErr> {
+        self.ensure_healthy().await?;
+        let conn = self.conn().await;
+        Mutation::create(&conn, di).await
     }
 }

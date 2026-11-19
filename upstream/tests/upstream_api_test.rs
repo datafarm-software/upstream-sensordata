@@ -56,6 +56,23 @@ async fn test_lazy_login() {
             threads: 10,
         },
     ];
+    let db = Database::connect("sqlite::memory:").await.unwrap();
+    db.get_schema_builder()
+        .register(DeviceInfo)
+        .apply(&db)
+        .await
+        .unwrap();
+    Mutation::create(
+        &db,
+        device_info::Model {
+            id: 0,
+            device_id: "device1".to_owned(),
+            block_id: "block1".to_owned(),
+        },
+    )
+    .await
+    .unwrap();
+    let shared_db = Arc::new(db);
     let login_called = Arc::new(AtomicUsize::new(0));
     let mock_data = Arc::new(SensorData {
         device_id: "device1".to_string(),
@@ -64,13 +81,14 @@ async fn test_lazy_login() {
     });
     for tc in cases {
         println!("case: {}", tc.name);
-        let mut authed = Authed {
-            transport: MockUpstream {
+        let mut authed = Authed::new(
+            MockUpstream {
                 login_called: login_called.clone(),
                 mock_data: mock_data.clone(),
             },
-            ..Default::default()
-        };
+            Arc::unwrap_or_clone(shared_db.clone()),
+        )
+        .await;
         authed.token = RwLock::new(Some(tc.starting_token));
         let futs = (0..tc.threads).map(|_| authed.sensor_data(tonic::Request::new(INPUT.clone())));
         let _results = futures::future::join_all(futs).await;
@@ -136,14 +154,14 @@ async fn test_sensor_data() {
     });
     for tc in cases {
         println!("case: {}", tc.name);
-        let authed = Authed {
-            transport: MockUpstream {
+        let authed = Authed::new(
+            MockUpstream {
                 login_called: login_called.clone(),
                 mock_data: mock_data.clone(),
             },
-            db: Arc::unwrap_or_clone(shared_db.clone()),
-            ..Default::default()
-        };
+            Arc::unwrap_or_clone(shared_db.clone()),
+        )
+        .await;
         let res = authed.sensor_data(tonic::Request::new(tc.input)).await;
         let (msg, code) = match res {
             Ok(resp) => (Some(resp.into_inner()), tonic::Code::Ok),

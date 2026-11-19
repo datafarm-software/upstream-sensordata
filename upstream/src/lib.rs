@@ -7,6 +7,7 @@ use sea_orm::{DatabaseConnection, DbErr};
 use sensor_data::sensor_data_service_server::SensorDataService;
 use sensor_data::{SensorDataRequest, SensorDataResponse};
 use std::sync::RwLock;
+use tokio::sync::Mutex;
 use tonic::{Request, Response, Status};
 
 pub mod api;
@@ -14,15 +15,23 @@ pub mod sensor_data {
     include!("../generated/rust/sensor_data/v1/sensor_data.v1.rs");
 }
 
-#[derive(Default)]
-pub struct Authed<T> {
-    pub refresh_gate: tokio::sync::Mutex<()>,
+pub struct Authed<T: Transport> {
+    refresh_gate: Mutex<()>,
     pub token: RwLock<Option<Token>>,
-    pub transport: T,
-    pub db: DatabaseConnection,
+    transport: T,
+    db: DatabaseConnection,
 }
 
 impl<T: Transport> Authed<T> {
+    pub async fn new(transport: T, db: DatabaseConnection) -> Self {
+        Self {
+            transport,
+            db,
+            token: RwLock::new(None),
+            refresh_gate: Mutex::new(()),
+        }
+    }
+
     async fn ensure_token(&self) -> Token {
         match self.token.read().unwrap().clone() {
             Some(t) => t,

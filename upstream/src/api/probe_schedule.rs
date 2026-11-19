@@ -1,8 +1,12 @@
 use super::error::ApiError;
 use super::token::Token;
 use super::transport::Transport;
-use entity::device_info::Model;
+use chrono::{DateTime, Utc};
+use entity::device_info::Model as DeviceInfo;
+use reqwest::header::AUTHORIZATION;
 use serde::{Deserialize, Serialize};
+use serde_tuple::Deserialize_tuple;
+use std::collections::HashMap;
 use std::time::Duration;
 use tonic::Result;
 
@@ -55,6 +59,32 @@ async fn check_status(resp: reqwest::Response) -> Result<reqwest::Response, ApiE
     Err(ApiError::Upstream { status, body })
 }
 
+#[derive(Deserialize)]
+pub struct Response {
+    pub success: bool,
+    pub data: Data,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct Data {
+    pub sensors: HashMap<String, Sensor>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct Sensor {
+    pub name: String,
+    #[serde(rename = "type")]
+    pub kind: String,
+    pub readings: Vec<Reading>,
+}
+
+#[derive(Debug, Deserialize_tuple)]
+pub struct Reading {
+    #[serde(with = "chrono::serde::ts_seconds")]
+    pub time: DateTime<Utc>,
+    pub value: f64,
+}
+
 impl Transport for PSClient {
     async fn login(&self) -> Result<Token, ApiError> {
         let resp = self
@@ -74,9 +104,15 @@ impl Transport for PSClient {
 
     async fn sensor_data(
         &self,
-        _token: &Token,
-        _body: &Model,
+        token: &Token,
+        body: &DeviceInfo,
     ) -> Result<crate::sensor_data::SensorDataResponse, ApiError> {
-        todo!()
+        let url = format!("{0}/{1}/data", self.base_url, body.block_id);
+        let body = self
+            .http
+            .get(url)
+            .header(AUTHORIZATION, format!("Bearer {0}", token.as_str()))
+            .send()
+            .await?;
     }
 }

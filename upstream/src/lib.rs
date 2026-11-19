@@ -7,7 +7,7 @@ pub mod sensor_data {
 use api::error::ApiError;
 use api::token::Token;
 use api::transport::Transport;
-use device_info::Query;
+use device_info::Db;
 use reqwest::StatusCode;
 use sea_orm::{DatabaseConnection, DbErr};
 use sensor_data::sensor_data_service_server::SensorDataService;
@@ -20,11 +20,11 @@ pub struct Authed<T: Transport> {
     refresh_gate: Mutex<()>,
     pub token: RwLock<Option<Token>>,
     transport: T,
-    db: DatabaseConnection,
+    db: Db,
 }
 
 impl<T: Transport> Authed<T> {
-    pub async fn new(transport: T, db: DatabaseConnection) -> Self {
+    pub async fn new(transport: T, db: Db) -> Self {
         Self {
             transport,
             db,
@@ -65,7 +65,7 @@ where
     ) -> Result<Response<SensorDataResponse>, Status> {
         let token = self.ensure_token().await;
         let body = req.into_inner();
-        let di = match Query::find_device_info(&self.db, &body.device_id).await {
+        let di = match self.db.find_device_info(&body.device_id).await {
             Ok(Some(di)) => di,
             Ok(None) => return Err(Status::not_found("device not found")),
             Err(e) => match e {

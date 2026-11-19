@@ -1,3 +1,5 @@
+use crate::device_info::Query;
+use ::entity::device_info;
 use sea_orm::{ConnectOptions, Database, DatabaseConnection, DbErr};
 use std::result::Result;
 use std::sync::Arc;
@@ -69,5 +71,14 @@ impl Db {
         .await?;
         *self.conn.write().await = fresh;
         Ok(())
+    }
+
+    pub async fn find_device_info(
+        &self,
+        device_id: &String,
+    ) -> Result<Option<device_info::Model>, DbErr> {
+        self.ensure_healthy().await?;
+        let conn = self.conn().await;
+        Query::find_device_info(&conn, device_id).await
     }
 }
